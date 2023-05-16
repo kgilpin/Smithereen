@@ -10,9 +10,16 @@ FROM eclipse-temurin:17-jdk
 SHELL ["bash", "-c"]
 RUN mkdir -p /opt/smithereen
 WORKDIR /opt/smithereen
+COPY --from=builder /usr/src/app/appmap.yml .
 COPY --from=builder /usr/src/app/target/smithereen-jar-with-dependencies.jar /opt/smithereen/smithereen.jar
 COPY --from=builder /usr/src/app/*.so /opt/smithereen/
 RUN echo -e '#!/bin/bash\njava -jar /opt/smithereen/smithereen.jar /usr/local/etc/config.properties init_admin' > smithereen-init-admin && chmod +x smithereen-init-admin
 
 EXPOSE 4567
-ENTRYPOINT java -Djna.library.path=/opt/smithereen -jar /opt/smithereen/smithereen.jar /usr/local/etc/config.properties
+ENTRYPOINT java \
+	-javaagent:/usr/src/app/appmap-1.17.2.jar \
+	-Djava.io.tmpdir=/usr/src/app/target/ \
+	-Dappmap.debug=true \
+	-Djna.library.path=/opt/smithereen \
+	-jar /opt/smithereen/smithereen.jar \
+	/usr/local/etc/config.properties

@@ -11,10 +11,12 @@ services:
    - mysql
   volumes:
    - ./config.properties:/usr/local/etc/config.properties
+   - ./appmap-1.17.2.jar:/usr/src/app/appmap-1.17.2.jar
    - smithereen-media:/uploads
+   - ./target:/usr/src/app/target
   restart: always
  mysql:
-  image: mysql:8
+  image: amd64/mysql:8
   environment:
    MYSQL_ROOT_PASSWORD: smithereen
    MYSQL_DATABASE: smithereen
@@ -37,8 +39,8 @@ services:
    IMGPROXY_LOCAL_FILESYSTEM_ROOT: "/uploads"
    # See README or config_docker.properties for how to generate these.
    # Must match config, otherwise you won't be seeing any memes in the newsfeed.
-   IMGPROXY_KEY: GENERATE YOUR OWN
-   IMGPROXY_SALT: GENERATE YOUR OWN
+   IMGPROXY_KEY: e35370575394e3cb3140bf37657f7f861b4ea2f79ca394191268b7f01fc4c0a9
+   IMGPROXY_SALT: f398a7d4b1926924eee7d82d7f5dbf1f89b870ad23da2ed30353cf922a6c5827
   volumes:
    - smithereen-media:/uploads
   restart: always
