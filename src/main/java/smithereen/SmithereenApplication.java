@@ -17,7 +17,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Objects;
 
-import smithereen.activitypub.ActivityPubWorker;
 import smithereen.activitypub.objects.ActivityPubObject;
 import smithereen.data.Account;
 import smithereen.data.ForeignGroup;
@@ -102,7 +101,7 @@ public class SmithereenApplication{
 			Config.load(args[0]);
 			Config.loadFromDatabase();
 			DatabaseSchemaUpdater.maybeUpdate();
-		}catch(IOException|SQLException x){
+		}catch(IOException | SQLException x){
 			throw new RuntimeException(x);
 		}
 
@@ -125,7 +124,7 @@ public class SmithereenApplication{
 		else
 			staticFileLocation("/public");
 		staticFiles.expireTime(7*24*60*60);
-		before((request, response) -> {
+		before((request, response)->{
 			request.attribute("context", context);
 
 			if(request.pathInfo().startsWith("/api/"))
@@ -517,7 +516,7 @@ public class SmithereenApplication{
 		exception(UserErrorException.class, (x, req, resp)->{
 			resp.body(Utils.wrapErrorString(req, resp, x.getMessage()));
 		});
-		exception(Exception.class, (exception, req, res) -> {
+		exception(Exception.class, (exception, req, res)->{
 			LOG.warn("Exception while processing {} {}", req.requestMethod(), req.raw().getPathInfo(), exception);
 			res.status(500);
 			StringWriter sw=new StringWriter();
@@ -528,7 +527,7 @@ public class SmithereenApplication{
 		after((req, resp)->{
 			Long l=req.attribute("start_time");
 			if(l!=null){
-				long t=(long)l;
+				long t=(long) l;
 				resp.header("X-Generated-In", (System.currentTimeMillis()-t)+"");
 			}
 			if(req.attribute("isTemplate")!=null && !Utils.isAjax(req)){
@@ -551,26 +550,27 @@ public class SmithereenApplication{
 						}
 						info.history.add(path);
 					}
-				}catch(Throwable ignore){}
+				}catch(Throwable ignore){
+				}
 			}
 		});
 
 		awaitInitialization();
 		setupCustomSerializer();
 
-		responseTypeSerializer(ActivityPubObject.class, (out, obj) -> {
+		responseTypeSerializer(ActivityPubObject.class, (out, obj)->{
 			OutputStreamWriter writer=new OutputStreamWriter(out, StandardCharsets.UTF_8);
 			Utils.gson.toJson(obj.asRootActivityPubObject(), writer);
 			writer.flush();
 		});
 
-		responseTypeSerializer(RenderedTemplateResponse.class, (out, obj) -> {
+		responseTypeSerializer(RenderedTemplateResponse.class, (out, obj)->{
 			OutputStreamWriter writer=new OutputStreamWriter(out, StandardCharsets.UTF_8);
 			obj.renderToWriter(writer);
 			writer.flush();
 		});
 
-		responseTypeSerializer(WebDeltaResponse.class, (out, obj) -> {
+		responseTypeSerializer(WebDeltaResponse.class, (out, obj)->{
 			OutputStreamWriter writer=new OutputStreamWriter(out, StandardCharsets.UTF_8);
 			Utils.gson.toJson(obj.commands(), writer);
 			writer.flush();
@@ -579,7 +579,8 @@ public class SmithereenApplication{
 		MaintenanceScheduler.runDaily(()->{
 			try{
 				SessionStorage.deleteExpiredEmailCodes();
-			}catch(SQLException ignore){}
+			}catch(SQLException ignore){
+			}
 			FloodControl.PASSWORD_RESET.gc();
 			TopLevelDomainList.updateIfNeeded();
 		});
@@ -588,17 +589,19 @@ public class SmithereenApplication{
 			LOG.info("Stopping Spark");
 			Spark.awaitStop();
 			LOG.info("Stopped Spark");
-			// These try-catch blocks are needed because these classes might not have been loaded by the time the process is shut down,
-			// and the JVM refuses to load any new classes from within a shutdown hook.
-			try{
-				context.getActivityPubWorker().shutDown();
-			}catch(NoClassDefFoundError ignore){}
-			try{
-				MaintenanceScheduler.shutDown();
-			}catch(NoClassDefFoundError ignore){}
-			try{
-				BackgroundTaskRunner.shutDown();
-			}catch(NoClassDefFoundError ignore){}
+
+			for(Runnable noArgFunction: new Runnable[]{
+					()->context.getActivityPubWorker().shutDown(),
+					MaintenanceScheduler::shutDown,
+					BackgroundTaskRunner::shutDown
+			}){
+				try{
+					noArgFunction.run();
+				}catch(NoClassDefFoundError ignored){
+					// A class might not have been loaded by the time the process is shut down,
+					// and the JVM will not load any new classes from within a shutdown hook.
+				}
+			}
 		}));
 	}
 
