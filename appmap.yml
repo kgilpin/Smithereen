@@ -1,0 +1,7 @@
+name: smithereen
+language: java
+appmap_dir: target
+packages:
+    - path: smithereen
+      exclude:
+          - smithereen.lang.formatting.ICUMessageParser$ParserImpl#skipWhitespace
